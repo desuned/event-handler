@@ -1,0 +1,15 @@
+#stream-1
+ssh,admin1,admin123
+ssh,admin,admin123
+ssh,admin,admin1234
+ssh,admin,admin1234
+ssh,admin,admin
+sudo,admin123
+dir
+
+#stream-2
+ssh,admin,admin123
+ssh,admin,admin123
+ssh,admin,admin
+sudo,admin
+dir
