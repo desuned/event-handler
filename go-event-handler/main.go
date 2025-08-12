@@ -3,9 +3,11 @@ package main
 import (
 	"article/events-handler/pkg"
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"sync"
+	"time"
 )
 
 type CurrentUser struct {
@@ -13,6 +15,7 @@ type CurrentUser struct {
 }
 
 func (cu *CurrentUser) HandleSSH(streamId string, event pkg.Event) {
+	prevCuid := cu.Cuid
 	for i := range pkg.Users {
 		if event.Name == pkg.Users[i].Name {
 			cu.Cuid = i
@@ -27,6 +30,11 @@ func (cu *CurrentUser) HandleSSH(streamId string, event pkg.Event) {
 
 	pkg.Users[cu.Cuid].Mu.Lock()
 	defer pkg.Users[cu.Cuid].Mu.Unlock()
+
+	if pkg.Users[cu.Cuid].Authd == streamId {
+		log.Printf("You are already logged in (%s)", streamId)
+		return
+	}
 
 	if pkg.Users[cu.Cuid].Authd != "" {
 		log.Printf("User %s already authd from %s (%s)",
@@ -51,6 +59,9 @@ func (cu *CurrentUser) HandleSSH(streamId string, event pkg.Event) {
 	}
 
 	if pkg.Users[cu.Cuid].Authd == "" {
+		if prevCuid != -1 {
+			pkg.Users[prevCuid].Authd = ""
+		}
 		pkg.Users[cu.Cuid].Authd = streamId
 		pkg.Users[cu.Cuid].AuthRetries = 0
 		log.Printf("User %s authd (%s)",
@@ -115,12 +126,15 @@ func main() {
 		return
 	}
 
-	var wg sync.WaitGroup
+	start := time.Now() // Начало замера
 
+	var wg sync.WaitGroup
 	for _, stream := range streams {
 		wg.Add(1)
 		go HandleStream(&stream, &wg)
 	}
-
 	wg.Wait()
+
+	elapsed := time.Since(start).Nanoseconds() // Конец замера
+	fmt.Printf("Обработка всех потоков заняла %d наносекунд\n", elapsed)
 }
