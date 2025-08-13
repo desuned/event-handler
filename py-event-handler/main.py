@@ -1,8 +1,7 @@
 import logging
 from typing import List, Dict
 from dataclasses import dataclass, field
-import threading
-import time
+import asyncio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,7 +32,7 @@ class User:
     passwd: str
     authd: str = ""
     auth_retries: int = 0
-    mu: threading.Lock = field(default_factory=threading.Lock)
+    mu: asyncio.Lock = field(default_factory=asyncio.Lock)  # Заменили на asyncio.Lock
 
 USERS: Dict[int, User] = {
     0: User(name="superadmin", passwd="P@ssw0rd!"),
@@ -52,7 +51,7 @@ class CurrentUser:
     def __init__(self):
         self.cuid = -1
 
-    def handle_ssh(self, stream_id: str, event: Event) -> None:
+    async def handle_ssh(self, stream_id: str, event: Event) -> None:
         prevCuid = self.cuid
         for uid, user in USERS.items():
             if event.name == user.name:
@@ -64,7 +63,7 @@ class CurrentUser:
             return
 
         user = USERS[self.cuid]
-        with user.mu:
+        async with user.mu:  # Используем async with для asyncio.Lock
 
             if user.authd == stream_id:
                 logger.info(f"You are already logged in ({stream_id})")
@@ -94,7 +93,7 @@ class CurrentUser:
                 logger.info(f"User {user.name} authd ({stream_id})")
                 return
 
-    def handle_sudo(self, stream_id: str, event: Event) -> None:
+    async def handle_sudo(self, stream_id: str, event: Event) -> None:
         if self.cuid == -1:
             return
 
@@ -104,7 +103,7 @@ class CurrentUser:
         else:
             logger.error(f"Bad password for sudo on user {user.name} ({stream_id})")
 
-    def handle_dir(self, stream_id: str, event: Event) -> None:
+    async def handle_dir(self, stream_id: str, event: Event) -> None:
         if self.cuid == -1:
             return
         logger.info(f"Accepted dir on user {USERS[self.cuid].name} ({stream_id})")
@@ -140,7 +139,7 @@ def parse_streams(data: str) -> List[Stream]:
 
     return streams
 
-def read_and_parse_file(file_path: str) -> List[Stream]:
+async def read_and_parse_file(file_path: str) -> List[Stream]:
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = file.read()
@@ -152,23 +151,22 @@ def read_and_parse_file(file_path: str) -> List[Stream]:
         logger.error(f"Ошибка при чтении файла: {e}")
         return []
 
-def handle_stream(stream: Stream, wg: threading.Event) -> None:
+async def handle_stream(stream: Stream) -> None:
     try:
         cu = CurrentUser()
         stream_id = stream.stream_id
 
         for event in stream.events:
             if event.type == "ssh":
-                cu.handle_ssh(stream_id, event)
+                await cu.handle_ssh(stream_id, event)
             elif event.type == "sudo":
-                cu.handle_sudo(stream_id, event)
+                await cu.handle_sudo(stream_id, event)
             elif event.type == "dir":
-                cu.handle_dir(stream_id, event)
-    finally:
-        if wg:
-            wg.set()
+                await cu.handle_dir(stream_id, event)
+    except Exception as e:
+        logger.error(f"Ошибка в потоке {stream.stream_id}: {e}")
 
-def main():
+async def main():
     import sys
 
     if len(sys.argv) < 2:
@@ -176,25 +174,23 @@ def main():
         return
 
     file_path = sys.argv[1]
-    streams = read_and_parse_file(file_path)
+    streams = await read_and_parse_file(file_path)
 
     if not streams:
         return
 
-    wait_events = []
-    start_time = time.time_ns()  # Начало замера в наносекундах
+    start_time = asyncio.get_event_loop().time()  # Замер времени в asyncio
 
+    tasks = []
     for stream in streams:
-        event = threading.Event()
-        wait_events.append(event)
-        threading.Thread(target=handle_stream, args=(stream, event)).start()
+        task = asyncio.create_task(handle_stream(stream))
+        tasks.append(task)
 
-    for event in wait_events:
-        event.wait()
+    await asyncio.gather(*tasks)  # Ожидаем завершения всех корутин
 
-    end_time = time.time_ns()  # Конец замера
-    elapsed = end_time - start_time
-    print(f"Обработка всех потоков заняла {elapsed} наносекунд")
+    end_time = asyncio.get_event_loop().time()
+    elapsed = (end_time - start_time) * 1e9  # Переводим в наносекунды
+    print(f"Обработка всех потоков заняла {elapsed:.2f} наносекунд")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())  # Запуск асинхронного кода
