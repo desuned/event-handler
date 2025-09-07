@@ -113,7 +113,7 @@ func HandleStream(stream *pkg.Stream, wg *sync.WaitGroup) {
 }
 
 func main() {
-	file, err := os.Open("../data/streams.txt")
+	file, err := os.Open("../data/streams5.txt")
 	if err != nil {
 		return
 	}
@@ -126,7 +126,7 @@ func main() {
 		return
 	}
 
-	start := time.Now() // Начало замера
+	start := time.Now()
 
 	var wg sync.WaitGroup
 	for _, stream := range streams {
@@ -135,6 +135,6 @@ func main() {
 	}
 	wg.Wait()
 
-	elapsed := time.Since(start).Nanoseconds() // Конец замера
+	elapsed := time.Since(start).Nanoseconds()
 	fmt.Printf("Обработка всех потоков заняла %d наносекунд\n", elapsed)
 }

@@ -2,7 +2,7 @@ import logging
 from typing import List
 from dataclasses import dataclass, field
 import asyncio
-from pkg.models import Event, Stream, USERS
+from models import Event, Stream, USERS
 
 logging.basicConfig(
     level=logging.INFO,
