@@ -2,6 +2,10 @@ import logging
 from typing import List, Dict
 from dataclasses import dataclass, field
 import asyncio
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+import uvicorn
+import time
 
 logging.basicConfig(
     level=logging.INFO,
@@ -108,49 +112,6 @@ class CurrentUser:
             return
         logger.info(f"Accepted dir on user {USERS[self.cuid].name} ({stream_id})")
 
-def parse_streams(data: str) -> List[Stream]:
-    streams = []
-    stream_blocks = data.strip().split('#')[1:]
-
-    for block in stream_blocks:
-        if not block.strip():
-            continue
-
-        lines = block.strip().split('\n')
-        stream_id = lines[0]
-        event_lines = lines[1:]
-
-        events = []
-        for line in event_lines:
-            if not line.strip():
-                continue
-
-            parts = line.split(',')
-            if parts[0] == 'ssh':
-                if len(parts) >= 3:
-                    events.append(Event(type_='ssh', name=parts[1], passwd=parts[2]))
-            elif parts[0] == 'sudo':
-                if len(parts) >= 2:
-                    events.append(Event(type_='sudo', name=parts[1]))
-            elif parts[0] == 'dir':
-                events.append(Event(type_='dir'))
-
-        streams.append(Stream(stream_id=stream_id, events=events))
-
-    return streams
-
-async def read_and_parse_file(file_path: str) -> List[Stream]:
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = file.read()
-            return parse_streams(data)
-    except FileNotFoundError:
-        logger.error(f"Ошибка: файл {file_path} не найден")
-        return []
-    except Exception as e:
-        logger.error(f"Ошибка при чтении файла: {e}")
-        return []
-
 async def handle_stream(stream: Stream) -> None:
     try:
         cu = CurrentUser()
@@ -166,31 +127,99 @@ async def handle_stream(stream: Stream) -> None:
     except Exception as e:
         logger.error(f"Ошибка в потоке {stream.stream_id}: {e}")
 
+MAX_STREAMS = 50
+TIMEOUT = 30 * 60
+total_streams = 0
+total_time_ns = 0
+done_event = asyncio.Event()
+semaphore = asyncio.Semaphore(MAX_STREAMS)
+lock = asyncio.Lock()
+running_tasks = set()
+
+
+app = FastAPI()
+
+class StreamIn(BaseModel):
+    stream_id: str
+    events: list[dict]
+
+async def worker(stream: Stream):
+    global total_time_ns
+    async with semaphore:
+        start_ns = time.perf_counter_ns()
+        await handle_stream(stream)
+        dur_ns = time.perf_counter_ns() - start_ns
+
+    async with lock:
+        total_time_ns += dur_ns
+
+    logger.info(f"Завершение потока {stream.stream_id} за {dur_ns/1000:.3f} мкс")
+
+
+@app.post("/")
+async def receive_stream(req: Request):
+    global total_streams
+    payload = await req.json()
+    stream = Stream(
+        stream_id=payload["streamId"],
+        events=[Event(type_=ev.get("type",""), name=ev.get("name",""), passwd=ev.get("passwd",""))
+                for ev in payload.get("events", [])]
+    )
+
+    async with lock:
+        if total_streams >= MAX_STREAMS:
+            raise HTTPException(status_code=429, detail="Maximum streams limit reached")
+        total_streams += 1
+        current_count = total_streams
+
+    t = asyncio.create_task(worker(stream))
+    running_tasks.add(t)
+    t.add_done_callback(running_tasks.discard)
+
+    if current_count == MAX_STREAMS:
+        asyncio.create_task(trigger_done())
+
+    return {
+        "status": "processing_started",
+        "stream_id": stream.stream_id,
+        "count": f"{current_count}/{MAX_STREAMS}"
+    }
+
+
+async def trigger_done():
+    await asyncio.sleep(0.1)
+    done_event.set()
+
+async def start_server():
+    config = uvicorn.Config(app, host="0.0.0.0", port=8081, log_level="info", loop="asyncio")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+import contextlib
+
 async def main():
-    import sys
+    config = uvicorn.Config(app, host="0.0.0.0", port=8081, log_level="info", loop="asyncio")
+    server = uvicorn.Server(config)
 
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <file_path>")
-        return
+    server_task = asyncio.create_task(server.serve())
 
-    file_path = sys.argv[1]
-    streams = await read_and_parse_file(file_path)
+    try:
+        await asyncio.wait_for(done_event.wait(), timeout=TIMEOUT)
+    finally:
+        server.should_exit = True
 
-    if not streams:
-        return
+    await server_task
 
-    start_time = asyncio.get_event_loop().time()
+    if running_tasks:
+        await asyncio.gather(*list(running_tasks), return_exceptions=True)
 
-    tasks = []
-    for stream in streams:
-        task = asyncio.create_task(handle_stream(stream))
-        tasks.append(task)
+    avg_ns = total_time_ns / total_streams if total_streams else 0
+    logger.info(
+        "Полное чистое время обработки: %.3f мкс, среднее на поток: %.3f мкс"
+        % (total_time_ns/1e3, avg_ns/1e3)
+    )
 
-    await asyncio.gather(*tasks)
 
-    end_time = asyncio.get_event_loop().time()
-    elapsed = (end_time - start_time) * 1e9
-    print(f"Обработка всех потоков заняла {elapsed:.2f} наносекунд")
 
 if __name__ == "__main__":
     asyncio.run(main())

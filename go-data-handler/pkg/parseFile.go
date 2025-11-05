@@ -1,8 +1,8 @@
 package pkg
 
 import (
-	"article/events-handler/models"
 	"bufio"
+	"go-data-handler/models"
 	"strings"
 )
 

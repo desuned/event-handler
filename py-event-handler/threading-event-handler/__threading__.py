@@ -1,15 +1,14 @@
 import logging
-from typing import List, Dict
-from dataclasses import dataclass, field
 import threading
 import time
+from typing import List, Dict
+from dataclasses import dataclass, field
+from flask import Flask, request, jsonify
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger()
 
+# --------- модели ---------
 class Event:
     def __init__(self, type_: str, name: str = "", passwd: str = ""):
         self.type = type_
@@ -48,6 +47,7 @@ USERS: Dict[int, User] = {
     9: User(name="guest", passwd="T3mpPass!")
 }
 
+# --------- обработка ---------
 class CurrentUser:
     def __init__(self):
         self.cuid = -1
@@ -65,7 +65,6 @@ class CurrentUser:
 
         user = USERS[self.cuid]
         with user.mu:
-
             if user.authd == stream_id:
                 logger.info(f"You are already logged in ({stream_id})")
                 return
@@ -87,17 +86,15 @@ class CurrentUser:
                 return
 
             if not user.authd:
-                if (prevCuid != -1):
+                if prevCuid != -1:
                     USERS[prevCuid].authd = ""
                 user.authd = stream_id
                 user.auth_retries = 0
                 logger.info(f"User {user.name} authd ({stream_id})")
-                return
 
     def handle_sudo(self, stream_id: str, event: Event) -> None:
         if self.cuid == -1:
             return
-
         user = USERS[self.cuid]
         if event.passwd == user.passwd:
             logger.info(f"Accepted sudo on user {user.name} ({stream_id})")
@@ -109,92 +106,92 @@ class CurrentUser:
             return
         logger.info(f"Accepted dir on user {USERS[self.cuid].name} ({stream_id})")
 
-def parse_streams(data: str) -> List[Stream]:
-    streams = []
-    stream_blocks = data.strip().split('#')[1:]
+def handle_stream(stream: Stream):
+    global total_time
+    cu = CurrentUser()
+    stream_id = stream.stream_id
+    start_ns = time.perf_counter_ns()  # старт в наносекундах
 
-    for block in stream_blocks:
-        if not block.strip():
-            continue
+    for event in stream.events:
+        if event.type == "ssh":
+            cu.handle_ssh(stream_id, event)
+        elif event.type == "sudo":
+            cu.handle_sudo(stream_id, event)
+        elif event.type == "dir":
+            cu.handle_dir(stream_id, event)
 
-        lines = block.strip().split('\n')
-        stream_id = lines[0]
-        event_lines = lines[1:]
+    elapsed_ns = time.perf_counter_ns() - start_ns
 
-        events = []
-        for line in event_lines:
-            if not line.strip():
-                continue
+    with streams_lock:
+        total_time += elapsed_ns
 
-            parts = line.split(',')
-            if parts[0] == 'ssh':
-                if len(parts) >= 3:
-                    events.append(Event(type_='ssh', name=parts[1], passwd=parts[2]))
-            elif parts[0] == 'sudo':
-                if len(parts) >= 2:
-                    events.append(Event(type_='sudo', name=parts[1]))
-            elif parts[0] == 'dir':
-                events.append(Event(type_='dir'))
+    # выводим в миллисекундах с 3 знаками после запятой
+    logger.info(f"Завершение потока {stream_id} за {elapsed_ns/1e3:.3f} мкс")
 
-        streams.append(Stream(stream_id=stream_id, events=events))
+# --------- сервер ---------
+app = Flask(__name__)
+MAX_STREAMS = 50
+total_streams = 0
+total_time = 0.0
+streams_lock = threading.Lock()
+done_event = threading.Event()
+threads = []
 
-    return streams
+@app.route("/", methods=["POST"])
+def receive_stream():
+    global total_streams, total_time
 
-def read_and_parse_file(file_path: str) -> List[Stream]:
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = file.read()
-            return parse_streams(data)
-    except FileNotFoundError:
-        logger.error(f"Ошибка: файл {file_path} не найден")
-        return []
-    except Exception as e:
-        logger.error(f"Ошибка при чтении файла: {e}")
-        return []
+    data = request.get_json()
+    if not data or "streamId" not in data or "events" not in data:
+        return jsonify({"error": "Invalid JSON"}), 400
 
-def handle_stream(stream: Stream, wg: threading.Event) -> None:
-    try:
-        cu = CurrentUser()
-        stream_id = stream.stream_id
+    stream_id = data["streamId"]
+    events = [Event(ev.get("type", ""), ev.get("name", ""), ev.get("passwd", "")) for ev in data["events"]]
+    stream = Stream(stream_id, events)
 
-        for event in stream.events:
-            if event.type == "ssh":
-                cu.handle_ssh(stream_id, event)
-            elif event.type == "sudo":
-                cu.handle_sudo(stream_id, event)
-            elif event.type == "dir":
-                cu.handle_dir(stream_id, event)
-    finally:
-        if wg:
-            wg.set()
+    with streams_lock:
+        if total_streams >= MAX_STREAMS:
+            return jsonify({"error": "Maximum streams limit reached"}), 429
+
+        total_streams += 1
+        current_count = total_streams
+
+    t = threading.Thread(target=handle_stream, args=(stream,))
+    t.start()
+    threads.append(t)
+
+    if current_count == MAX_STREAMS:
+        done_event.set()
+
+    return jsonify({
+        "status": "processing_started",
+        "stream_id": stream.stream_id,
+        "count": f"{current_count}/{MAX_STREAMS}",
+    })
 
 def main():
-    import sys
+    from werkzeug.serving import make_server
 
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <file_path>")
-        return
+    server = make_server("0.0.0.0", 8081, app)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    logger.info("Server starting on :8081")
 
-    file_path = sys.argv[1]
-    streams = read_and_parse_file(file_path)
+    # ждём или лимита, или таймаута
+    if not done_event.wait(timeout=30*60):
+        logger.info("Таймаут, завершаем работу...")
+    else:
+        logger.info("Достигнут лимит потоков, завершаем работу...")
 
-    if not streams:
-        return
+    server.shutdown()
+    for t in threads:
+        t.join()
 
-    wait_events = []
-    start_time = time.time_ns()  # Начало замера в наносекундах
-
-    for stream in streams:
-        event = threading.Event()
-        wait_events.append(event)
-        threading.Thread(target=handle_stream, args=(stream, event)).start()
-
-    for event in wait_events:
-        event.wait()
-
-    end_time = time.time_ns()  # Конец замера
-    elapsed = end_time - start_time
-    print(f"Обработка всех потоков заняла {elapsed} наносекунд")
+    logger.info(
+        f"Полное чистое время обработки: {total_time/1e3:.3f} мкс, "
+        f"среднее на поток: {(total_time/total_streams)/1e3:.3f} мкс"
+    )
+    logger.info("Все потоки завершены")
 
 if __name__ == "__main__":
     main()

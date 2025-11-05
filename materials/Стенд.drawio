@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36" version="28.2.5">
+  <diagram name="Страница — 1" id="ErphrQwLgZ2Q8UCmHTNX">
+    <mxGraphModel dx="1426" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-4" value="Сервер обработки" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="418" y="291" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-5" value="Агент ssh-&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;команд&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="111" y="104" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-10" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;" parent="1" source="6cXitWyAGSGJHtwFW3BM-5" target="6cXitWyAGSGJHtwFW3BM-4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="307" y="423" as="sourcePoint" />
+            <mxPoint x="357" y="373" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-12" value="172.16.0.2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="139" y="74" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-13" value="172.16.0.1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="448" y="255" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-16" value="Агент ssh посылает неструктурированные данные об ssh командах" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
+          <mxGeometry x="82" y="574" width="184" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="6cXitWyAGSGJHtwFW3BM-17" value="Сервер обрабатывает получаемые по http протоколу данные и выводит их в структурированном виде" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
+          <mxGeometry x="577" y="264" width="185" height="107" as="geometry" />
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-1" value="Агент ssh-&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;команд&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="109" y="291" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-2" value="Агент ssh-&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;команд&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="114" y="461" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ilTAK-FWF-0GcXictWVI-1" target="6cXitWyAGSGJHtwFW3BM-4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="326" y="366" as="sourcePoint" />
+            <mxPoint x="513" y="553" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-4" value="Поток&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;данных&lt;/span&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ilTAK-FWF-0GcXictWVI-3" vertex="1" connectable="0">
+          <mxGeometry x="0.0145" y="2" relative="1" as="geometry">
+            <mxPoint x="-6" y="-11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-5" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" parent="1" source="ilTAK-FWF-0GcXictWVI-2" target="6cXitWyAGSGJHtwFW3BM-4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="314" y="531" as="sourcePoint" />
+            <mxPoint x="501" y="718" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-6" value="Поток данных" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ilTAK-FWF-0GcXictWVI-5" vertex="1" connectable="0">
+          <mxGeometry x="0.0145" y="2" relative="1" as="geometry">
+            <mxPoint x="-11" y="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-7" value="172.16.0.3" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="139" y="264" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ilTAK-FWF-0GcXictWVI-8" value="172.16.0.3" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="141" y="426" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="k0cvDyXydNGBTh8ub52z-1" value="Поток&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;данных&lt;/span&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="298" y="230" as="geometry">
+            <mxPoint x="23" y="-22" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

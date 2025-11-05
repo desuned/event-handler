@@ -1,11 +1,13 @@
 package main
 
 import (
-	"article/events-handler/pkg"
-	"bufio"
+	"article/events-handler/models"
+	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -14,10 +16,10 @@ type CurrentUser struct {
 	Cuid int
 }
 
-func (cu *CurrentUser) HandleSSH(streamId string, event pkg.Event) {
+func (cu *CurrentUser) HandleSSH(streamId string, event models.Event) {
 	prevCuid := cu.Cuid
-	for i := range pkg.Users {
-		if event.Name == pkg.Users[i].Name {
+	for i := range models.Users {
+		if event.Name == models.Users[i].Name {
 			cu.Cuid = i
 		}
 	}
@@ -28,73 +30,72 @@ func (cu *CurrentUser) HandleSSH(streamId string, event pkg.Event) {
 		return
 	}
 
-	pkg.Users[cu.Cuid].Mu.Lock()
-	defer pkg.Users[cu.Cuid].Mu.Unlock()
+	models.Users[cu.Cuid].Mu.Lock()
+	defer models.Users[cu.Cuid].Mu.Unlock()
 
-	if pkg.Users[cu.Cuid].Authd == streamId {
+	if models.Users[cu.Cuid].AuthStream == streamId {
 		log.Printf("You are already logged in (%s)", streamId)
 		return
 	}
 
-	if pkg.Users[cu.Cuid].Authd != "" {
-		log.Printf("User %s already authd from %s (%s)",
-			pkg.Users[cu.Cuid].Name, pkg.Users[cu.Cuid].Authd, streamId)
+	if models.Users[cu.Cuid].AuthStream != "" {
+		log.Printf("User %s already AuthStream from %s (%s)",
+			models.Users[cu.Cuid].Name, models.Users[cu.Cuid].AuthStream, streamId)
 		cu.Cuid = -1
 		return
 	}
 
-	if pkg.Users[cu.Cuid].AuthRetries >= 3 {
+	if models.Users[cu.Cuid].AuthRetries >= 3 {
 		log.Printf("Can't access user %s, user is blocked (%s)",
-			pkg.Users[cu.Cuid].Name, streamId)
+			models.Users[cu.Cuid].Name, streamId)
 		cu.Cuid = -1
 		return
 	}
 
-	if event.Passwd != pkg.Users[cu.Cuid].Passwd {
-		pkg.Users[cu.Cuid].AuthRetries++
+	if event.Passwd != models.Users[cu.Cuid].Passwd {
+		models.Users[cu.Cuid].AuthRetries++
 		log.Printf("Wrong password for user %s (%s)",
-			pkg.Users[cu.Cuid].Name, streamId)
+			models.Users[cu.Cuid].Name, streamId)
 		cu.Cuid = -1
 		return
 	}
 
-	if pkg.Users[cu.Cuid].Authd == "" {
+	if models.Users[cu.Cuid].AuthStream == "" {
 		if prevCuid != -1 {
-			pkg.Users[prevCuid].Authd = ""
+			models.Users[prevCuid].AuthStream = ""
 		}
-		pkg.Users[cu.Cuid].Authd = streamId
-		pkg.Users[cu.Cuid].AuthRetries = 0
-		log.Printf("User %s authd (%s)",
-			pkg.Users[cu.Cuid].Name, streamId)
+		models.Users[cu.Cuid].AuthStream = streamId
+		models.Users[cu.Cuid].AuthRetries = 0
+		log.Printf("User %s AuthStream (%s)",
+			models.Users[cu.Cuid].Name, streamId)
 		return
 	}
 }
 
-func (cu *CurrentUser) HandleSudo(streamId string, event pkg.Event) {
+func (cu *CurrentUser) HandleSudo(streamId string, event models.Event) {
 	if cu.Cuid == -1 {
 		return
 	}
-	if event.Passwd == pkg.Users[cu.Cuid].Passwd {
+	if event.Passwd == models.Users[cu.Cuid].Passwd {
 		log.Printf("Accepted sudo on user %s (%s)",
-			pkg.Users[cu.Cuid].Name, streamId)
+			models.Users[cu.Cuid].Name, streamId)
 		return
 	} else {
 		log.Printf("Bad password for sudo on user %s (%s)",
-			pkg.Users[cu.Cuid].Name, streamId)
+			models.Users[cu.Cuid].Name, streamId)
 		return
 	}
 }
 
-func (cu *CurrentUser) HandlerDir(streamId string, event pkg.Event) {
+func (cu *CurrentUser) HandlerDir(streamId string, event models.Event) {
 	if cu.Cuid == -1 {
 		return
 	}
 	log.Printf("Accepted dir on user %s (%s)",
-		pkg.Users[cu.Cuid].Name, streamId)
+		models.Users[cu.Cuid].Name, streamId)
 }
 
-func HandleStream(stream *pkg.Stream, wg *sync.WaitGroup) {
-	defer wg.Done()
+func HandleStream(stream *models.Stream) {
 	cu := CurrentUser{
 		Cuid: -1,
 	}
@@ -112,29 +113,109 @@ func HandleStream(stream *pkg.Stream, wg *sync.WaitGroup) {
 	}
 }
 
+var (
+	startTime    time.Time
+	totalStreams int
+	totalTime    time.Duration
+	mu           sync.Mutex
+	wg           sync.WaitGroup
+	maxStreams   int
+	doneChan     chan struct{}
+)
+
 func main() {
-	file, err := os.Open("../data/streams5.txt")
-	if err != nil {
-		return
-	}
-	defer file.Close()
+	maxStreams := flag.Int("max", 5, "Maximum number of streams to use")
+	flag.Parse()
 
-	scanner := bufio.NewScanner(file)
-	streams := pkg.ParseStreams(scanner)
+	totalStreams = 0
+	doneChan = make(chan struct{})
 
-	if err := scanner.Err(); err != nil {
-		return
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
+			return
+		}
+
+		var stream models.Stream
+		if err := json.NewDecoder(r.Body).Decode(&stream); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON"})
+			return
+		}
+
+		mu.Lock()
+		if totalStreams >= *maxStreams {
+			mu.Unlock()
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Maximum streams limit reached"})
+			return
+		}
+
+		totalStreams++
+		currentCount := totalStreams
+		mu.Unlock()
+
+		wg.Add(1)
+		go processStream(stream)
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":    "processing_started",
+			"stream_id": stream.StreamId,
+			"count":     fmt.Sprintf("%d/%d", currentCount, maxStreams),
+		})
+
+		if currentCount == *maxStreams {
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				close(doneChan)
+			}()
+		}
+	})
+
+	server := &http.Server{Addr: ":8081"}
+
+	go func() {
+		fmt.Println("Server starting on :8081")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+	select {
+	case <-doneChan:
+		fmt.Println("Полное чистое время обработки горутин: ", totalTime.Microseconds())
+		fmt.Println("Достигнут лимит потоков, завершаем работу...")
+	case <-waitWithTimeout(30 * time.Minute):
+		fmt.Println("Таймаут, завершаем работу...")
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	server.Shutdown(ctx)
+
+	wg.Wait()
+}
+
+func waitWithTimeout(d time.Duration) chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		time.Sleep(d)
+		close(ch)
+	}()
+	return ch
+}
+
+func processStream(stream models.Stream) {
+	defer wg.Done()
 
 	start := time.Now()
 
-	var wg sync.WaitGroup
-	for _, stream := range streams {
-		wg.Add(1)
-		go HandleStream(&stream, &wg)
-	}
-	wg.Wait()
+	HandleStream(&stream)
 
-	elapsed := time.Since(start).Nanoseconds()
-	fmt.Printf("Обработка всех потоков заняла %d наносекунд\n", elapsed)
+	duration := time.Since(start)
+	totalTime += duration
+	fmt.Printf("Завершение потока %s за %v\n", stream.StreamId, duration)
 }

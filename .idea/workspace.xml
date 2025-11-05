@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="dd37cde9-957e-4331-b181-d65fbc1480e2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.~lock.Статья_v2.docx#" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-data-handler/go.mod" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-data-handler/main.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-data-handler/models/events.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-data-handler/pkg/parseFile.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-event-handler/models/events.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go-event-handler/models/users.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/materials/goroutines.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/materials/myltiprocessing.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/materials/threading.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/materials/Стенд.drawio" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/materials/корутины.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/py-event-handler/multiprocessing-event-handler/__multiprocessing__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Статья_v2.docx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Статья_ver2.docx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/event-handler.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/event-handler.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/streams10.txt" beforeDir="false" afterPath="$PROJECT_DIR$/go-data-handler/data/streams10.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/streams5.txt" beforeDir="false" afterPath="$PROJECT_DIR$/go-data-handler/data/streams5.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/streams50.txt" beforeDir="false" afterPath="$PROJECT_DIR$/go-data-handler/data/streams50.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go-event-handler/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/go-event-handler/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go-event-handler/pkg/models.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/go-event-handler/pkg/parseFile.go" beforeDir="false" afterPath="$PROJECT_DIR$/go-event-handler/pkg/parseFile.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/py-event-handler/__asyncio__.py" beforeDir="false" afterPath="$PROJECT_DIR$/py-event-handler/asyncio-event-handler/__asyncio__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/py-event-handler/__multiprocessing__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/py-event-handler/__threading__.py" beforeDir="false" afterPath="$PROJECT_DIR$/py-event-handler/threading-event-handler/__threading__.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="GOROOT" url="file:///snap/go/current" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="33rjJZA0mGChTuzlIR3OSx5yFFR" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.GoLinterPluginOnboarding": "true",
+    "RunOnceActivity.GoLinterPluginStorageMigration": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "git-widget-placeholder": "main",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "last_opened_file_path": "/home/zvorykin-gleb/Downloads/Catppuccin_Theme-3.5.1.zip",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.lookFeel"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-gosdk-f466f9b0953e-3d2cccfc42a2-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-252.25557.189" />
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-GO-252.25557.189" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="dd37cde9-957e-4331-b181-d65fbc1480e2" name="Changes" comment="" />
+      <created>1760082013277</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760082013277</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+</project>
